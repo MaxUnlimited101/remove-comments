@@ -4,6 +4,7 @@
 #include <cstring>
 #include <unordered_map>
 #include <vector>
+#include <xutility>
 
 void usage()
 {
@@ -73,7 +74,7 @@ void remove_block_comments(std::istream& in,
 	const std::string& comment_symbol_start,
 	const std::string& comment_symbol_end);
 
-void remove_all_comments(const std::string& filename);
+void remove_all_comments(const std::string& filename, const line_comments_map& line_map, const block_comments_map& block_map);
 
 void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map, 
 	const std::string& line_file, const std::string& block_file);
@@ -83,7 +84,7 @@ int main(int argc, const char** argv)
 	if (argc == 2 && std::strcmp(argv[1], "--help") == 0)
 		help();
 
-	if (argc < 4)
+	if (argc < 3)
 		usage();
 	
 	line_comments_map ext_to_line_comment_symbols;
@@ -95,14 +96,16 @@ int main(int argc, const char** argv)
 
 	// TODO: update README on 'remove support for '\' char to break line' ???
 
-	// TODO: update README on file extensions
+	// TODO: update README on 'comment files'
 
-	// TODO: add flag for reading from stdin ??
+	// TODO: add basic built-in support for most know languages !!
 
-	// TODO: add basic built-in support for most know languages
+	fill_comments_maps(ext_to_line_comment_symbols, ext_to_block_comment_symbols, argv[1], argv[2]);
 
-	remove_c_comments(argv[2]);
-
+	for (int i = 3; i < argc; i++)
+	{
+		remove_all_comments(argv[i], ext_to_line_comment_symbols, ext_to_block_comment_symbols);
+	}
 	return 0;
 }
 
@@ -260,9 +263,9 @@ void remove_block_comments(std::istream& in,
 	}
 }
 
-void remove_all_comments(const std::string& filename)
+void remove_all_comments(const std::string& filename, const line_comments_map& line_map, const block_comments_map& block_map)
 {
-	size_t ext_off = filename.find_last_of('.');
+	size_t ext_off = filename.find_last_of('.') + 1;
 	if (ext_off == filename.npos)
 	{
 		std::cerr << '[' << filename << "] has no extension, trying to process next files...\n";
@@ -276,7 +279,25 @@ void remove_all_comments(const std::string& filename)
 		in.close();
 		return;
 	}
-	// TODO: finish
+
+	// TODO: fix so that it modifies the same memory/file, and not step by step
+
+	std::string extension = filename.substr(ext_off);
+	std::cout << "got extension = [" << extension << "]\n";
+	for (const auto& line_com : line_map.at(extension))
+	{
+		std::cout << "Removing all line comments: [" << line_com << "]\n";
+		remove_line_comments(in, line_com);
+		in.seekg(0);
+	}
+
+	for (const auto& pair : block_map.at(extension))
+	{
+		std::cout << "Removing all block comments: [" << pair.first << "][" << pair.second << "]\n";
+		remove_block_comments(in, pair.first, pair.second);
+		in.seekg(0);
+	}
+	in.close();
 }
 
 void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map, 
@@ -300,17 +321,25 @@ void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_m
 	{
 		std::string line;
 		std::getline(line_in, line);
+		if (line.empty())
+			continue;
 		std::string extension = line.substr(0, line.find(':'));
 		line_map[extension].push_back(line.substr(line.find(':') + 1));
+		//std::cout << "Got: [" << extension << "]:[" << line.substr(line.find(':') + 1) << "]\n";
 	}
+	line_in.close();
 
 	while (!block_in.eof())
 	{
 		std::string line;
 		std::getline(block_in, line);
+		if (line.empty())
+			continue;
 		std::string extension = line.substr(0, line.find(':'));
-		std::string beg = line.substr(line.find(':') + 1, line.find("QQQ"));
-		std::string end = line.substr(line.find("QQQ") + 1);
+		std::string beg = line.substr(line.find(':') + 1, line.find("QQQ") - line.find(':') - 1);
+		std::string end = line.substr(line.find("QQQ") + 3);
 		block_map[extension].push_back({ beg, end });
+		//std::cout << "Got: [" << extension << "]:[" << beg << "]QQQ[" << end << "]\n";
 	}
+	block_in.close();
 }
