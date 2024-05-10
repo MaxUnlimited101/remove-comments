@@ -3,107 +3,33 @@
 #include <string>
 #include <cstring>
 #include <unordered_map>
+#include <vector>
 
 void usage()
 {
-	std::cout << "Usage: ./remove-comments <file1> [file2] [...]\n" <<
+	std::cout << "Usage: ./remove-comments <line comments file> <block comments file> <file1> [file2] [...]\n" <<
 		"Help page: ./remove-comments --help\n";
 	exit(EXIT_FAILURE);
 }
 
 void help()
 {
-	std::cout << "Removes comments from file based on its extension.\n" <<
-		"For example *.c files are treated as C code, hence '/* */' and '//' are treated as comments\n" <<
-		"All supported languages: https://en.wikipedia.org/wiki/Comparison_of_programming_languages_(syntax)#Comments\n";
+	std::cout << "Removes comments from file based on 'comment files'.\n" <<
+		"'Comment files' contain information about different languages in a specific format\n" <<
+		"Example 'line comments file'\n" <<
+		"\t<FILE_EXTENSION_1>:<LINE_COMMENT_DEFINITION_1>\n" <<
+		"\t<FILE_EXTENSION_2>:<LINE_COMMENT_DEFINITION_2>\n" <<
+		"Example 'block comments file':\n" <<
+		"\t<FILE_EXTENSION_1>:<BLOCK_COMMENT_BEGINNING_DEFINITION_1>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_1>\n" <<
+		"\t<FILE_EXTENSION_2>:<BLOCK_COMMENT_BEGINNING_DEFINITION_2>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_2>\n" <<
+		"Note: QQQ should be included, hence this puts a certain limitation on flexibility of this tool, " <<
+		"but no language should use QQQ as part of defining a comment\n";
+		
 	exit(EXIT_SUCCESS);
 }
 
-void setup_ext_to_line_comm_map(std::unordered_map<std::string, std::string>& ext_to_line_comment_symbols)
-{
-	// Since this program was intented as a CLI tool, 
-	// this should probably be embedded in the executable
-
-	ext_to_line_comment_symbols["adb"] = "--";
-	ext_to_line_comment_symbols["ads"] = "--";
-	ext_to_line_comment_symbols["e"] = "--";
-	ext_to_line_comment_symbols["exw"] = "--";
-	ext_to_line_comment_symbols["edb"] = "--";
-	ext_to_line_comment_symbols["vhd"] = "--";
-	ext_to_line_comment_symbols["scpt"] = "--";
-	ext_to_line_comment_symbols["scptd"] = "--";
-	ext_to_line_comment_symbols["applescript"] = "--";
-	ext_to_line_comment_symbols["applescript"] = "--";
-	ext_to_line_comment_symbols["asm"] = ";";
-	ext_to_line_comment_symbols["s"] = ";";
-	ext_to_line_comment_symbols["inc"] = ";";
-	ext_to_line_comment_symbols["wla"] = ";";
-	ext_to_line_comment_symbols["ps1"] = "#";
-	ext_to_line_comment_symbols["sh"] = "#";
-	ext_to_line_comment_symbols["bas"] = "REM";
-	ext_to_line_comment_symbols["c"] = "//"; // NOTE: only works from C99
-	ext_to_line_comment_symbols["h"] = "//"; // NOTE: only works from C99
-	ext_to_line_comment_symbols["cpp"] = "//";
-	ext_to_line_comment_symbols["hpp"] = "//";
-	ext_to_line_comment_symbols["C"] = "//";
-	ext_to_line_comment_symbols["cc"] = "//";
-	ext_to_line_comment_symbols["cxx"] = "//";
-	ext_to_line_comment_symbols["c++"] = "//";
-	ext_to_line_comment_symbols["hh"] = "//";
-	ext_to_line_comment_symbols["hpp"] = "//";
-	ext_to_line_comment_symbols["hxx"] = "//";
-	ext_to_line_comment_symbols["h++"] = "//";
-	ext_to_line_comment_symbols["cppm"] = "//";
-	ext_to_line_comment_symbols["ixx"] = "//";
-	ext_to_line_comment_symbols["go"] = "//";
-	ext_to_line_comment_symbols["swift"] = "//";
-	ext_to_line_comment_symbols["js"] = "//";
-	ext_to_line_comment_symbols["cjs"] = "//";
-	ext_to_line_comment_symbols["mjs"] = "//";
-	ext_to_line_comment_symbols["ts"] = "//";
-	ext_to_line_comment_symbols["v"] = "//";
-	ext_to_line_comment_symbols["vsh"] = "//";
-	ext_to_line_comment_symbols["vsh"] = "//";
-	ext_to_line_comment_symbols["cs"] = "//";
-	ext_to_line_comment_symbols["csx"] = "//";
-	ext_to_line_comment_symbols["cbl"] = "*>"; // NOTE: only for COBOL 2002
-	ext_to_line_comment_symbols["cob"] = "*>"; // NOTE: only for COBOL 2002
-	ext_to_line_comment_symbols["cpy"] = "*>"; // NOTE: only for COBOL 2002
-	ext_to_line_comment_symbols["cobra"] = "#";
-	ext_to_line_comment_symbols["d"] = "//";
-	ext_to_line_comment_symbols["ex"] = "//"; // Elixir
-	ext_to_line_comment_symbols["exs"] = "//";
-	ext_to_line_comment_symbols["fs"] = "\\";
-	ext_to_line_comment_symbols["fs"] = "\\";
-	ext_to_line_comment_symbols["fth"] = "\\";
-	ext_to_line_comment_symbols["4th"] = "\\";
-	ext_to_line_comment_symbols["f90"] = "!";
-	ext_to_line_comment_symbols["hs"] = "--";
-	ext_to_line_comment_symbols["lhs"] = "--";
-	ext_to_line_comment_symbols["java"] = "//";
-	ext_to_line_comment_symbols["jl"] = "#";
-	ext_to_line_comment_symbols["lisp"] = ";";
-	ext_to_line_comment_symbols["lua"] = "--";
-	ext_to_line_comment_symbols["m"] = "%"; // MATLAB
-	ext_to_line_comment_symbols["mat"] = "%";
-	ext_to_line_comment_symbols["nim"] = "#";
-	ext_to_line_comment_symbols["pas"] = "//"; // Object Pascal
-	ext_to_line_comment_symbols["plx"] = "#";
-	ext_to_line_comment_symbols["pl"] = "#";
-	ext_to_line_comment_symbols["rb"] = "#";
-	ext_to_line_comment_symbols["rb"] = "#";
-	ext_to_line_comment_symbols["sql"] = "--";
-	ext_to_line_comment_symbols["py"] = "#";
-	ext_to_line_comment_symbols["pyw"] = "#";
-	ext_to_line_comment_symbols["r"] = "#";
-	ext_to_line_comment_symbols["rs"] = "//";
-	ext_to_line_comment_symbols["rlib"] = "//";
-	ext_to_line_comment_symbols["erl"] = "%";
-	ext_to_line_comment_symbols["zig"] = "//";
-
-	// PHP and VB .NET are special, they are covered seperately
-	// since they have multiple forms of line comments
-}
+using line_comments_map = std::unordered_map<std::string, std::vector<std::string>>;
+using block_comments_map = std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>>;
 
 #pragma region test_comments
 // ----------------------
@@ -149,16 +75,19 @@ void remove_block_comments(std::istream& in,
 
 void remove_all_comments(const std::string& filename);
 
+void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map, 
+	const std::string& line_file, const std::string& block_file);
+
 int main(int argc, const char** argv)
 {
-	if (argc == 1)
-		usage();
-
-	if (strcmp(argv[1], "--help"))
+	if (argc == 2 && std::strcmp(argv[1], "--help") == 0)
 		help();
+
+	if (argc < 4)
+		usage();
 	
-	std::unordered_map<std::string, std::string>& ext_to_line_comment_symbols;
-	setup_ext_to_line_comm_map(ext_to_line_comment_symbols);
+	line_comments_map ext_to_line_comment_symbols;
+	block_comments_map ext_to_block_comment_symbols;
 
 	// TODO: add wildcard support
 
@@ -167,6 +96,10 @@ int main(int argc, const char** argv)
 	// TODO: update README on 'remove support for '\' char to break line' ???
 
 	// TODO: update README on file extensions
+
+	// TODO: add flag for reading from stdin ??
+
+	// TODO: add basic built-in support for most know languages
 
 	remove_c_comments(argv[2]);
 
@@ -343,38 +276,41 @@ void remove_all_comments(const std::string& filename)
 		in.close();
 		return;
 	}
+	// TODO: finish
+}
 
-	// https://en.wikipedia.org/wiki/Comparison_of_programming_languages_(syntax)#Comments
-	std::string ext = filename.substr(0, ext_off);
-
-	for (size_t i = 0; i < ext.size(); i++)
+void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map, 
+	const std::string& line_file, const std::string& block_file)
+{
+	std::ifstream line_in(line_file);
+	if (!line_in.good())
 	{
-		ext[i] = std::tolower(ext[i]);
+		std::cerr << "Failed to open line_comments_file [" << line_file << "] Quitting!\n";
+		exit(EXIT_FAILURE);
 	}
 
-	std::ifstream in(filename);
-	if (!in.good())
+	std::ifstream block_in(block_file);
+	if (!block_in.good())
 	{
-		std::cerr << "Could not open " << filename << ", trying to process next files...\n";
-		in.close();
-		return;
+		std::cerr << "Failed to open line_comments_file [" << block_file << "] Quitting!\n";
+		exit(EXIT_FAILURE);
 	}
 
-	if (ext == "php")
+	while (!line_in.eof())
 	{
-		remove_line_comments(in, "#");
-		remove_line_comments(in, "//");
-		remove_block_comments(in, "/*", "*/");
-		return;
-	}
-	if (ext == "vb")
-	{
-		remove_line_comments(in, "'");
-		remove_line_comments(in, "Rem");
-		remove_block_comments(in, "#If COMMENT Then", "#End If");
-		return;
+		std::string line;
+		std::getline(line_in, line);
+		std::string extension = line.substr(0, line.find(':'));
+		line_map[extension].push_back(line.substr(line.find(':') + 1));
 	}
 
-
-
+	while (!block_in.eof())
+	{
+		std::string line;
+		std::getline(block_in, line);
+		std::string extension = line.substr(0, line.find(':'));
+		std::string beg = line.substr(line.find(':') + 1, line.find("QQQ"));
+		std::string end = line.substr(line.find("QQQ") + 1);
+		block_map[extension].push_back({ beg, end });
+	}
 }
