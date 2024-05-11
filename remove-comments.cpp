@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include <xutility>
+#include <sstream>
 
 void usage()
 {
@@ -25,7 +26,7 @@ void help()
 		"\t<FILE_EXTENSION_2>:<BLOCK_COMMENT_BEGINNING_DEFINITION_2>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_2>\n" <<
 		"Note: QQQ should be included, hence this puts a certain limitation on flexibility of this tool, " <<
 		"but no language should use QQQ as part of defining a comment\n";
-		
+
 	exit(EXIT_SUCCESS);
 }
 
@@ -66,17 +67,17 @@ comment
 // ----------------------
 #pragma endregion
 
-void remove_c_comments(const std::string& filename);
+//void remove_c_comments(const std::string& filename);
 
-void remove_line_comments(std::istream& in, const std::string& comment_symbol);
+void remove_line_comments(std::vector<std::string>& file, const std::string& comment_symbol);
 
-void remove_block_comments(std::istream& in,
+void remove_block_comments(std::vector<std::string>& file,
 	const std::string& comment_symbol_start,
 	const std::string& comment_symbol_end);
 
 void remove_all_comments(const std::string& filename, const line_comments_map& line_map, const block_comments_map& block_map);
 
-void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map, 
+void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map,
 	const std::string& line_file, const std::string& block_file);
 
 int main(int argc, const char** argv)
@@ -86,7 +87,7 @@ int main(int argc, const char** argv)
 
 	if (argc < 3)
 		usage();
-	
+
 	line_comments_map ext_to_line_comment_symbols;
 	block_comments_map ext_to_block_comment_symbols;
 
@@ -106,121 +107,115 @@ int main(int argc, const char** argv)
 	{
 		remove_all_comments(argv[i], ext_to_line_comment_symbols, ext_to_block_comment_symbols);
 	}
-	return 0;
+	return EXIT_SUCCESS;
 }
 
-void remove_c_comments(const std::string& filename)
+//void remove_c_comments(const std::string& filename)
+//{
+//	std::ifstream in(filename);
+//	if (!in.good())
+//	{
+//		std::cerr << "Could not open " << filename << ", trying to process next files...\n";
+//		in.close();
+//		return;
+//	}
+//
+//	std::string line;
+//	std::cout << "---Starting printing the document\n";
+//	bool line_break = false;
+//	bool multiline_line_break = false;
+//	while (!in.eof())
+//	{
+//		std::getline(in, line);
+//
+//		if (multiline_line_break)
+//		{
+//			size_t of = line.find("*/");
+//			if (of != line.npos)
+//			{
+//				line = line.substr(of + 2);
+//				multiline_line_break = false;
+//			}
+//			else
+//			{
+//				continue;
+//			}
+//		}
+//
+//		size_t offset;
+//		if (line_break)
+//		{
+//			if (line.find('\\') != line.size() - 1)
+//			{
+//				line_break = false;
+//			}
+//			else
+//			{
+//				line_break = true;
+//			}
+//			continue;
+//		}
+//
+//		if ((offset = line.find("//")) != line.npos)
+//		{
+//			if (line.find('\\', offset) == line.size() - 1)
+//			{
+//				line_break = true;
+//			}
+//			line = line.substr(0, offset);
+//		}
+//
+//		offset = line.find("/*");
+//		size_t offset2 = line.find("*/");
+//
+//		while (offset != line.npos)
+//		{
+//			if (offset2 != line.npos)
+//			{
+//				line = line.substr(0, offset) + line.substr(offset2 + 2);
+//				multiline_line_break = false;
+//			}
+//			else
+//			{
+//				multiline_line_break = true;
+//				std::cout << line.substr(0, offset);
+//				break;
+//			}
+//			offset = line.find("/*");
+//			offset2 = line.find("*/");
+//		}
+//		if (multiline_line_break)
+//		{
+//			continue;
+//		}
+//
+//		std::cout << line << std::endl;
+//	}
+//	std::cout << "---Ended printing the document\n";
+//}
+
+void remove_line_comments(std::vector<std::string>& file, const std::string& comment_symbol)
 {
-	std::ifstream in(filename);
-	if (!in.good())
-	{
-		std::cerr << "Could not open " << filename << ", trying to process next files...\n";
-		in.close();
-		return;
-	}
-
 	std::string line;
-	std::cout << "---Starting printing the document\n";
-	bool line_break = false;
-	bool multiline_line_break = false;
-	while (!in.eof())
+	for (std::string& line : file)
 	{
-		std::getline(in, line);
-
-		if (multiline_line_break)
-		{
-			size_t of = line.find("*/");
-			if (of != line.npos)
-			{
-				line = line.substr(of + 2);
-				multiline_line_break = false;
-			}
-			else
-			{
-				continue;
-			}
-		}
-
-		size_t offset;
-		if (line_break)
-		{
-			if (line.find('\\') != line.size() - 1)
-			{
-				line_break = false;
-			}
-			else
-			{
-				line_break = true;
-			}
-			continue;
-		}
-
-		if ((offset = line.find("//")) != line.npos)
-		{
-			if (line.find('\\', offset) == line.size() - 1)
-			{
-				line_break = true;
-			}
-			line = line.substr(0, offset);
-		}
-
-		offset = line.find("/*");
-		size_t offset2 = line.find("*/");
-
-		while (offset != line.npos)
-		{
-			if (offset2 != line.npos)
-			{
-				line = line.substr(0, offset) + line.substr(offset2 + 2);
-				multiline_line_break = false;
-			}
-			else
-			{
-				multiline_line_break = true;
-				std::cout << line.substr(0, offset);
-				break;
-			}
-			offset = line.find("/*");
-			offset2 = line.find("*/");
-		}
-		if (multiline_line_break)
-		{
-			continue;
-		}
-
-		std::cout << line << std::endl;
-	}
-	std::cout << "---Ended printing the document\n";
-}
-
-void remove_line_comments(std::istream& in, const std::string& comment_symbol)
-{
-	std::string line;
-	while (!in.eof())
-	{
-		std::getline(in, line);
-
 		size_t offset;
 
 		if ((offset = line.find(comment_symbol)) != line.npos)
 		{
 			line = line.substr(0, offset);
 		}
-
-		std::cout << line << std::endl;
 	}
 }
 
-void remove_block_comments(std::istream& in,
+void remove_block_comments(std::vector<std::string>& file,
 	const std::string& comment_symbol_start,
 	const std::string& comment_symbol_end)
 {
 	std::string line;
 	bool multiline_line_break = false;
-	while (!in.eof())
+	for (std::string& line : file)
 	{
-		std::getline(in, line);
-
 		if (multiline_line_break)
 		{
 			size_t of = line.find(comment_symbol_end);
@@ -231,6 +226,7 @@ void remove_block_comments(std::istream& in,
 			}
 			else
 			{
+				line.clear();
 				continue;
 			}
 		}
@@ -249,7 +245,7 @@ void remove_block_comments(std::istream& in,
 			else
 			{
 				multiline_line_break = true;
-				std::cout << line.substr(0, offset);
+				line = line.substr(0, offset);
 				break;
 			}
 			offset = line.find(comment_symbol_start);
@@ -259,7 +255,6 @@ void remove_block_comments(std::istream& in,
 		{
 			continue;
 		}
-		std::cout << line << std::endl;
 	}
 }
 
@@ -280,27 +275,38 @@ void remove_all_comments(const std::string& filename, const line_comments_map& l
 		return;
 	}
 
-	// TODO: fix so that it modifies the same memory/file, and not step by step
-
 	std::string extension = filename.substr(ext_off);
 	std::cout << "got extension = [" << extension << "]\n";
-	for (const auto& line_com : line_map.at(extension))
+
+	std::vector<std::string> file_read;
+	while (!in.eof())
 	{
-		std::cout << "Removing all line comments: [" << line_com << "]\n";
-		remove_line_comments(in, line_com);
-		in.seekg(0);
+		std::string t;
+		std::getline(in, t);
+		file_read.push_back(t);
 	}
+	in.close();
 
 	for (const auto& pair : block_map.at(extension))
 	{
 		std::cout << "Removing all block comments: [" << pair.first << "][" << pair.second << "]\n";
-		remove_block_comments(in, pair.first, pair.second);
-		in.seekg(0);
+		remove_block_comments(file_read, pair.first, pair.second);
 	}
-	in.close();
+
+	for (const auto& line_com : line_map.at(extension))
+	{
+		std::cout << "Removing all line comments: [" << line_com << "]\n";
+		remove_line_comments(file_read, line_com);
+	}
+
+	for (auto& str : file_read)
+	{
+		if (!str.empty())
+			std::cout << str << std::endl;
+	}
 }
 
-void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map, 
+void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map,
 	const std::string& line_file, const std::string& block_file)
 {
 	std::ifstream line_in(line_file);
