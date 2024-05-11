@@ -5,7 +5,8 @@
 #include <unordered_map>
 #include <vector>
 #include <xutility>
-#include <sstream>
+#include <regex>
+#include <filesystem>
 
 void usage()
 {
@@ -80,6 +81,8 @@ void remove_all_comments(const std::string& filename, const line_comments_map& l
 void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_map,
 	const std::string& line_file, const std::string& block_file);
 
+std::vector<std::string> globPattern(const std::string& pattern, const std::string& directory);
+
 int main(int argc, const char** argv)
 {
 	if (argc == 2 && std::strcmp(argv[1], "--help") == 0)
@@ -93,7 +96,7 @@ int main(int argc, const char** argv)
 
 	// TODO: add wildcard support
 
-	// TODO: proper testing
+	// TODO: proper testing ??
 
 	// TODO: update README on 'remove support for '\' char to break line' ???
 
@@ -101,10 +104,16 @@ int main(int argc, const char** argv)
 
 	// TODO: add basic built-in support for most know languages !!
 
+	// TODO: update README on C++17 dependency
+
 	fill_comments_maps(ext_to_line_comment_symbols, ext_to_block_comment_symbols, argv[1], argv[2]);
 
 	for (int i = 3; i < argc; i++)
 	{
+		std::filesystem::path p(argv[i]);
+		std::cout << "p.filename().string() + \".\" + p.extension().string() == " << p.filename().string() + p.extension().string() << std::endl;
+		std::cout << "p.parent_path().string() == " << p.parent_path().string() << std::endl;
+		std::vector<std::string> files = globPattern(p.filename().string() + "." + p.extension().string(), p.parent_path().string());
 		remove_all_comments(argv[i], ext_to_line_comment_symbols, ext_to_block_comment_symbols);
 	}
 	return EXIT_SUCCESS;
@@ -348,4 +357,20 @@ void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_m
 		//std::cout << "Got: [" << extension << "]:[" << beg << "]QQQ[" << end << "]\n";
 	}
 	block_in.close();
+}
+
+std::vector<std::string> globPattern(const std::string& pattern, const std::string& directory) {
+	std::vector<std::string> files;
+	std::regex regexPattern(pattern);
+
+	for (const auto& entry : std::filesystem::directory_iterator(directory)) {
+		if (entry.is_regular_file()) {
+			std::string filename = entry.path().filename().string();
+			if (std::regex_match(filename, regexPattern)) {
+				files.emplace_back(entry.path().string());
+			}
+		}
+	}
+
+	return files;
 }
