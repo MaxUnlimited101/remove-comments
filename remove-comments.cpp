@@ -10,7 +10,7 @@
 
 void usage()
 {
-	std::cout << "Usage: ./remove-comments <line comments file> <block comments file> <file1> [file2] [...]\n" <<
+	std::cout << "Usage: ./remove-comments <line comments file> <block comments file> <file1 | regex> [file2 | regex] [...]\n" <<
 		"Help page: ./remove-comments --help\n";
 	exit(EXIT_FAILURE);
 }
@@ -26,7 +26,10 @@ void help()
 		"\t<FILE_EXTENSION_1>:<BLOCK_COMMENT_BEGINNING_DEFINITION_1>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_1>\n" <<
 		"\t<FILE_EXTENSION_2>:<BLOCK_COMMENT_BEGINNING_DEFINITION_2>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_2>\n" <<
 		"Note: QQQ should be included, hence this puts a certain limitation on flexibility of this tool, " <<
-		"but no language should use QQQ as part of defining a comment\n";
+		"but no language should use QQQ as part of defining a comment\n" <<
+		"Also note that support for most used known languages is built in\n" <<
+		"Also note that instead of specifying filenames you can use REGEX expressions. \n" <<
+		"A good example would be './.*.c' -> all C files in current directory";
 
 	exit(EXIT_SUCCESS);
 }
@@ -94,27 +97,22 @@ int main(int argc, const char** argv)
 	line_comments_map ext_to_line_comment_symbols;
 	block_comments_map ext_to_block_comment_symbols;
 
-	// TODO: add wildcard support
-
 	// TODO: proper testing ??
-
-	// TODO: update README on 'remove support for '\' char to break line' ???
 
 	// TODO: update README on 'comment files'
 
 	// TODO: add basic built-in support for most know languages !!
-
-	// TODO: update README on C++17 dependency
 
 	fill_comments_maps(ext_to_line_comment_symbols, ext_to_block_comment_symbols, argv[1], argv[2]);
 
 	for (int i = 3; i < argc; i++)
 	{
 		std::filesystem::path p(argv[i]);
-		std::cout << "p.filename().string() + \".\" + p.extension().string() == " << p.filename().string() + p.extension().string() << std::endl;
+		std::cout << "p.filename().string() == " << p.filename().string() << std::endl;
 		std::cout << "p.parent_path().string() == " << p.parent_path().string() << std::endl;
-		std::vector<std::string> files = globPattern(p.filename().string() + "." + p.extension().string(), p.parent_path().string());
-		remove_all_comments(argv[i], ext_to_line_comment_symbols, ext_to_block_comment_symbols);
+		std::vector<std::string> files = globPattern(p.filename().string(), p.parent_path().string());
+		for (auto& fil : files)
+			remove_all_comments(fil, ext_to_line_comment_symbols, ext_to_block_comment_symbols);
 	}
 	return EXIT_SUCCESS;
 }
