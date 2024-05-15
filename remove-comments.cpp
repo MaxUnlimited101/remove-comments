@@ -19,59 +19,24 @@ void help()
 {
 	std::cout << "Removes comments from file based on 'comment files'.\n" <<
 		"'Comment files' contain information about different languages in a specific format\n" <<
-		"Example 'line comments file'\n" <<
+		"Example 'line comments file'(without'\\t')\n" <<
 		"\t<FILE_EXTENSION_1>:<LINE_COMMENT_DEFINITION_1>\n" <<
 		"\t<FILE_EXTENSION_2>:<LINE_COMMENT_DEFINITION_2>\n" <<
 		"Example 'block comments file':\n" <<
 		"\t<FILE_EXTENSION_1>:<BLOCK_COMMENT_BEGINNING_DEFINITION_1>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_1>\n" <<
 		"\t<FILE_EXTENSION_2>:<BLOCK_COMMENT_BEGINNING_DEFINITION_2>QQQ<BLOCK_COMMENT_ENDING_DEFINITION_2>\n" <<
+		"Example for C++: Line file: \"cpp://\", Block file: cpp:/*QQQ*/\n" << 
 		"Note: QQQ should be included, hence this puts a certain limitation on flexibility of this tool, " <<
 		"but no language should use QQQ as part of defining a comment\n" <<
 		"Also note that support for most used known languages is built in\n" <<
 		"Also note that instead of specifying filenames you can use REGEX expressions. \n" <<
-		"A good example would be './.*.c' -> all C files in current directory";
+		"A good example would be './.*.c' -> all C files in current directory.\n";
 
 	exit(EXIT_SUCCESS);
 }
 
 using line_comments_map = std::unordered_map<std::string, std::vector<std::string>>;
 using block_comments_map = std::unordered_map<std::string, std::vector<std::pair<std::string, std::string>>>;
-
-#pragma region test_comments
-// ----------------------
-
-// comment 
-
-/* comment */
-
-/*
-	comment \
-	comment
-	// comment
-*/
-
-// /* \
-*/ comment\
-comment */
-
-
-// comment \
-	comment \
-	comment	
-
-/*
-comment
-// comment
-\
-comment
-*/
-
-// /* /* comment */ /* comment */ */ <--does not work
-
-// ----------------------
-#pragma endregion
-
-//void remove_c_comments(const std::string& filename);
 
 void remove_line_comments(std::vector<std::string>& file, const std::string& comment_symbol);
 
@@ -97,109 +62,49 @@ int main(int argc, const char** argv)
 	line_comments_map ext_to_line_comment_symbols;
 	block_comments_map ext_to_block_comment_symbols;
 
-	// TODO: proper testing ??
+	// add basic built-in support for most know languages
+	ext_to_line_comment_symbols["c"] = { "//" };
+	ext_to_line_comment_symbols["cpp"] = { "//" };
+	ext_to_line_comment_symbols["cxx"] = { "//" };
+	ext_to_line_comment_symbols["h"] = { "//" };
+	ext_to_line_comment_symbols["hpp"] = { "//" };
+	ext_to_line_comment_symbols["js"] = { "//" };
+	ext_to_line_comment_symbols["ts"] = { "//" };
+	ext_to_line_comment_symbols["java"] = { "//" };
+	ext_to_line_comment_symbols["cs"] = { "//" };
+	ext_to_line_comment_symbols["py"] = { "#" };
+	ext_to_line_comment_symbols["php"] = { "#", "//"};
+	ext_to_line_comment_symbols["go"] = { "//" };
+	ext_to_line_comment_symbols["rs"] = { "//" };
+	ext_to_line_comment_symbols["rlib"] = { "//" };
+	ext_to_line_comment_symbols["sql"] = { "--" };
 
-	// TODO: update README on 'comment files'
-
-	// TODO: add basic built-in support for most know languages !!
+	ext_to_block_comment_symbols["c"] = { {"/*", "*/"}};
+	ext_to_block_comment_symbols["cpp"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["cxx"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["h"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["hpp"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["js"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["ts"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["java"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["cs"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["py"] = { {"'''", "'''"}, {"\"\"\"", "\"\"\""}};
+	ext_to_block_comment_symbols["php"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["go"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["rs"] = { {"/*", "*/"} };
+	ext_to_block_comment_symbols["rlib"] = { {"/*", "*/"} };
 
 	fill_comments_maps(ext_to_line_comment_symbols, ext_to_block_comment_symbols, argv[1], argv[2]);
 
 	for (int i = 3; i < argc; i++)
 	{
 		std::filesystem::path p(argv[i]);
-		std::cout << "p.filename().string() == " << p.filename().string() << std::endl;
-		std::cout << "p.parent_path().string() == " << p.parent_path().string() << std::endl;
 		std::vector<std::string> files = globPattern(p.filename().string(), p.parent_path().string());
 		for (auto& fil : files)
 			remove_all_comments(fil, ext_to_line_comment_symbols, ext_to_block_comment_symbols);
 	}
 	return EXIT_SUCCESS;
 }
-
-//void remove_c_comments(const std::string& filename)
-//{
-//	std::ifstream in(filename);
-//	if (!in.good())
-//	{
-//		std::cerr << "Could not open " << filename << ", trying to process next files...\n";
-//		in.close();
-//		return;
-//	}
-//
-//	std::string line;
-//	std::cout << "---Starting printing the document\n";
-//	bool line_break = false;
-//	bool multiline_line_break = false;
-//	while (!in.eof())
-//	{
-//		std::getline(in, line);
-//
-//		if (multiline_line_break)
-//		{
-//			size_t of = line.find("*/");
-//			if (of != line.npos)
-//			{
-//				line = line.substr(of + 2);
-//				multiline_line_break = false;
-//			}
-//			else
-//			{
-//				continue;
-//			}
-//		}
-//
-//		size_t offset;
-//		if (line_break)
-//		{
-//			if (line.find('\\') != line.size() - 1)
-//			{
-//				line_break = false;
-//			}
-//			else
-//			{
-//				line_break = true;
-//			}
-//			continue;
-//		}
-//
-//		if ((offset = line.find("//")) != line.npos)
-//		{
-//			if (line.find('\\', offset) == line.size() - 1)
-//			{
-//				line_break = true;
-//			}
-//			line = line.substr(0, offset);
-//		}
-//
-//		offset = line.find("/*");
-//		size_t offset2 = line.find("*/");
-//
-//		while (offset != line.npos)
-//		{
-//			if (offset2 != line.npos)
-//			{
-//				line = line.substr(0, offset) + line.substr(offset2 + 2);
-//				multiline_line_break = false;
-//			}
-//			else
-//			{
-//				multiline_line_break = true;
-//				std::cout << line.substr(0, offset);
-//				break;
-//			}
-//			offset = line.find("/*");
-//			offset2 = line.find("*/");
-//		}
-//		if (multiline_line_break)
-//		{
-//			continue;
-//		}
-//
-//		std::cout << line << std::endl;
-//	}
-//	std::cout << "---Ended printing the document\n";
-//}
 
 void remove_line_comments(std::vector<std::string>& file, const std::string& comment_symbol)
 {
@@ -283,7 +188,6 @@ void remove_all_comments(const std::string& filename, const line_comments_map& l
 	}
 
 	std::string extension = filename.substr(ext_off);
-	std::cout << "got extension = [" << extension << "]\n";
 
 	std::vector<std::string> file_read;
 	while (!in.eof())
@@ -296,13 +200,11 @@ void remove_all_comments(const std::string& filename, const line_comments_map& l
 
 	for (const auto& pair : block_map.at(extension))
 	{
-		std::cout << "Removing all block comments: [" << pair.first << "][" << pair.second << "]\n";
 		remove_block_comments(file_read, pair.first, pair.second);
 	}
 
 	for (const auto& line_com : line_map.at(extension))
 	{
-		std::cout << "Removing all line comments: [" << line_com << "]\n";
 		remove_line_comments(file_read, line_com);
 	}
 
@@ -338,7 +240,6 @@ void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_m
 			continue;
 		std::string extension = line.substr(0, line.find(':'));
 		line_map[extension].push_back(line.substr(line.find(':') + 1));
-		//std::cout << "Got: [" << extension << "]:[" << line.substr(line.find(':') + 1) << "]\n";
 	}
 	line_in.close();
 
@@ -352,7 +253,6 @@ void fill_comments_maps(line_comments_map& line_map, block_comments_map& block_m
 		std::string beg = line.substr(line.find(':') + 1, line.find("QQQ") - line.find(':') - 1);
 		std::string end = line.substr(line.find("QQQ") + 3);
 		block_map[extension].push_back({ beg, end });
-		//std::cout << "Got: [" << extension << "]:[" << beg << "]QQQ[" << end << "]\n";
 	}
 	block_in.close();
 }
